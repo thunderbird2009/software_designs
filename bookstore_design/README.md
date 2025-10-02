@@ -1,12 +1,15 @@
-# Bookstore Design Overview
+# Design an Online Bookstore
 
-This collection of design documents are created to be a comprehensive learning resource. Using the real-world context of a modern online bookstore, they offer a practical, end-to-end exploration of software architecture, data engineering, and applied machine learning algorithms.
+This collection of design documents are created to be a comprehensive learning resource that covers a wide spectrum of technical elements beyond just software system design. Using the real-world context of a modern online bookstore, they offer a practical, end-to-end exploration of software architecture, data engineering, and applied machine learning algorithms.
+
+## Document Structure
+Each design document in this collection follows a consistent, top-down structural pattern to ensure a clear and logical flow. Topics are typically introduced with a detailed set of business goals and functional/nonfunctional requirements. This is followed by a high-level architecture that outlines the main components and their interactions. Finally, each document provides deep dives into specific technical details, including data models, algorithms, sequence diagrams, and code examples.
 
 ## Summary of Documents
 
 ### 1\. [`bookstore_highlevel.md`](./bookstore_highlevel.md)
 
-**Overview:** This document provides a high-level view of the system's architecture and design principles.
+**Overview:** This document provides a high-level view of the overall website architecture and design principles.
 
   - It details the system's evolution from an initial 3-tier design to a modern, cloud-native architecture.
   - It outlines a microservices-based, event-driven system with key components like an API Gateway, a Single Page Application (SPA) frontend, and decoupled backend services with a database-per-service pattern.
