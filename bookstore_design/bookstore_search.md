@@ -1,14 +1,49 @@
 # Book Search 
-Designing a search experience is a critical part of an e-commerce platform. Using a dedicated search service like Elasticsearch is the standard, modern approach for building a fast, relevant, and feature-rich search.
+A search experience is a critical part of an e-commerce platform. Using a dedicated search service like Elasticsearch is the standard, modern approach for building a fast, relevant, and feature-rich search.
 We will define detailed requirements for the book search functionality and then providing a detailed technical design for its implementation using Elasticsearch.
 
------
+- [Book Search](#book-search)
+  - [Part 1: Detailed Search Requirements](#part-1-detailed-search-requirements)
+    - [A. Functional Requirements](#a-functional-requirements)
+    - [B. Non-Functional Requirements](#b-non-functional-requirements)
+  - [Part 2: Detailed Design with Elasticsearch](#part-2-detailed-design-with-elasticsearch)
+    - [A. Data Indexing Flow (Getting Data into Elasticsearch)](#a-data-indexing-flow-getting-data-into-elasticsearch)
+    - [B. Elasticsearch Index Mapping](#b-elasticsearch-index-mapping)
+    - [C. Indexed Documents](#c-indexed-documents)
+    - [Elasticsearch Index API Request](#elasticsearch-index-api-request)
+      - [Breakdown of the Indexed Document](#breakdown-of-the-indexed-document)
+    - [D. Querying Strategy](#d-querying-strategy)
+    - [E. Online Search Flow (Sequence Diagram)](#e-online-search-flow-sequence-diagram)
+  - [Example Queries](#example-queries)
+    - [1. Core Search with Relevance Boosting](#1-core-search-with-relevance-boosting)
+    - [2. Typo Tolerance (Fuzzy Matching)](#2-typo-tolerance-fuzzy-matching)
+    - [3. Autocomplete / Typeahead Suggestions](#3-autocomplete--typeahead-suggestions)
+    - [4. Filtering and Faceted Navigation](#4-filtering-and-faceted-navigation)
+      - [Example A: Initial Search with Aggregations (Generating Facets)](#example-a-initial-search-with-aggregations-generating-facets)
+      - [Example B: Applying a Filter from a Facet](#example-b-applying-a-filter-from-a-facet)
+    - [5. Sorting](#5-sorting)
+  - [Model Different Formats as Sub Documents](#model-different-formats-as-sub-documents)
+    - [The Problem with a "Flat" Model](#the-problem-with-a-flat-model)
+    - [The Solution: The `nested` Data Type](#the-solution-the-nested-data-type)
+      - [1. Updated Elasticsearch Mapping](#1-updated-elasticsearch-mapping)
+      - [2. Updated Example of an Indexed Document](#2-updated-example-of-an-indexed-document)
+      - [3. Example of a `nested` Query](#3-example-of-a-nested-query)
+  - [Sematic Matching](#sematic-matching)
+    - [What are Semantic Search and Text Embeddings?](#what-are-semantic-search-and-text-embeddings)
+    - [Detailed Design for Semantic Search](#detailed-design-for-semantic-search)
+      - [1. The Indexing Flow: Generating and Storing Embeddings](#1-the-indexing-flow-generating-and-storing-embeddings)
+      - [2. The Querying Flow: Hybrid Search](#2-the-querying-flow-hybrid-search)
+      - [Example Hybrid Search Query](#example-hybrid-search-query)
+  - [Custom Ranking](#custom-ranking)
+    - [The Core Concept: Two-Phase Search (Retrieve and Re-rank)](#the-core-concept-two-phase-search-retrieve-and-re-rank)
+    - [Option 1: External Re-ranking Service (Microservice Approach)](#option-1-external-re-ranking-service-microservice-approach)
+    - [Option 2: Elasticsearch LTR Plugin (Integrated Approach)](#option-2-elasticsearch-ltr-plugin-integrated-approach)
 
-## **Part 1: Detailed Search Requirements**
+## Part 1: Detailed Search Requirements
 
 Before designing the system, we must define what a great book search experience looks like for our users.
 
-### **A. Functional Requirements**
+### A. Functional Requirements
 
 1.  **Core Search Capabilities:**
 
@@ -36,7 +71,7 @@ Before designing the system, we must define what a great book search experience 
 
       * Each item in the search results list must display essential information: Book Cover Image, Title, Author(s), Price, and Average User Rating.
 
-### **B. Non-Functional Requirements**
+### B. Non-Functional Requirements
 
 1.  **Performance:** The search experience must be extremely fast.
       * Autocomplete suggestions should appear in **under 100ms**.
@@ -45,11 +80,11 @@ Before designing the system, we must define what a great book search experience 
 
 -----
 
-## **Part 2: Detailed Design with Elasticsearch**
+## Part 2: Detailed Design with Elasticsearch
 
 This design outlines how to use Elasticsearch to meet all the requirements defined above within our microservices architecture.
 
-### **A. Data Indexing Flow (Getting Data into Elasticsearch)**
+### A. Data Indexing Flow (Getting Data into Elasticsearch)
 
 We'll use our event-driven architecture to keep Elasticsearch synchronized.
 
@@ -68,7 +103,7 @@ graph LR
     D -- Indexes Document --> E[(Elasticsearch)];
 ```
 
-### **B. Elasticsearch Index Mapping**
+### B. Elasticsearch Index Mapping
 
 The "mapping" is the schema for our search index. We will create an index named `books` with the following structure, which is carefully designed to enable our required features.
 
@@ -149,7 +184,7 @@ The "mapping" is the schema for our search index. We will create an index named 
   * **`isbn`**: A `keyword` as it's a unique identifier we won't be doing partial searches on.
   * **`publication_year` / `average_rating` / `price`**: Numeric types allow for efficient range filtering and sorting.
 
-### **C. Indexed Documents**
+### C. Indexed Documents
 Certainly. Here is a complete example of the API request that the **Indexing Service** would send to Elasticsearch.
 
 This happens after the service has consumed an event (e.g., `BookUpdated`) and aggregated all the necessary data from the `Product Catalog Service`'s database (joining data from the `Books`, `Authors`, and `Reviews` tables) into a single, denormalized JSON document that is optimized for search.
@@ -196,7 +231,7 @@ This single JSON object is the "document" that Elasticsearch will store, analyze
 
 This single document contains all the information needed to handle every search feature we required, from full-text search and filtering to sorting and autocomplete.
 
-### **D. Querying Strategy**
+### D. Querying Strategy
 
 A dedicated **Search Service** (or the Product Catalog Service) will be responsible for translating user requests into Elasticsearch queries.
 
@@ -206,7 +241,7 @@ A dedicated **Search Service** (or the Product Catalog Service) will be responsi
   * **Filtering (Facets):** When a user searches, the query will include an `aggregations` block to get the counts for each facet (e.g., "Fantasy (120)", "Sci-Fi (88)"). When a user clicks a filter like "Fantasy", the frontend re-submits the search request, and the Search Service adds a `filter` clause to the query. Filters are very fast as they don't affect scoring.
   * **Sorting:** Handled via the `sort` parameter in the search query, allowing sorting by fields like `price` or `publication_year`.
 
-### **E. Online Search Flow (Sequence Diagram)**
+### E. Online Search Flow (Sequence Diagram)
 
 This diagram shows how the components interact during a search.
 

@@ -1,13 +1,54 @@
 # Recommendations of Books
-This is a feature that can significantly enhance user experience and drive business goals. We will start with with a comprehensive set of requirements for the book recommendation system, then a high level architecture of the design, before we drive into various technical details.
+Product recommendations can significantly enhance user experience and drive business goals. We will start with a comprehensive set of requirements for the book recommendation system, then a high level architecture of the design, before we drive into various technical details.
 
----
+- [Recommendations of Books](#recommendations-of-books)
+  - [Requirements](#requirements)
+      - [1. Business \& User Goals](#1-business--user-goals)
+      - [2. Functional Requirements](#2-functional-requirements)
+      - [3. Non-Functional Requirements](#3-non-functional-requirements)
+  - [Architectural Design](#architectural-design)
+    - [Architectural Philosophy](#architectural-philosophy)
+    - [System Architecture Diagram](#system-architecture-diagram)
+    - [Component Breakdown](#component-breakdown)
+    - [How This Design Meets the Requirements](#how-this-design-meets-the-requirements)
+  - [Deep Dive: Collaborative Filtering (CF)](#deep-dive-collaborative-filtering-cf)
+    - [1. The Core Idea: "Wisdom of the Crowd"](#1-the-core-idea-wisdom-of-the-crowd)
+    - [2. Classic Approaches to Collaborative Filtering](#2-classic-approaches-to-collaborative-filtering)
+    - [3. The Modern Approach: Matrix Factorization (Model-Based CF)](#3-the-modern-approach-matrix-factorization-model-based-cf)
+    - [4. Implementation in Our Architecture](#4-implementation-in-our-architecture)
+  - [Deep Dive: Content-Based Filtering](#deep-dive-content-based-filtering)
+    - [1. The Core Idea: "If You Liked That, You'll Like This"](#1-the-core-idea-if-you-liked-that-youll-like-this)
+    - [2. How It Works: The Three Key Steps](#2-how-it-works-the-three-key-steps)
+    - [3. The Modern Approach: Using Text Embeddings](#3-the-modern-approach-using-text-embeddings)
+    - [4. How Book Profile is Processed](#4-how-book-profile-is-processed)
+      - [1. The Traditional Approach: TF-IDF (A Flattened "Bag of Words")](#1-the-traditional-approach-tf-idf-a-flattened-bag-of-words)
+      - [2. The Modern Approach: Text Embeddings (Preserving Meaning and Context)](#2-the-modern-approach-text-embeddings-preserving-meaning-and-context)
+      - [Summary: TF-IDF vs. Embeddings](#summary-tf-idf-vs-embeddings)
+    - [5. Implementation in Our Architecture](#5-implementation-in-our-architecture)
+    - [6. Pros and Cons of Content-Based Filtering](#6-pros-and-cons-of-content-based-filtering)
+  - [Deep Dive: Co-purchase Model](#deep-dive-co-purchase-model)
+    - [The Relationship: General vs. Specific](#the-relationship-general-vs-specific)
+    - [How a Co-purchase Model is Typically Built](#how-a-co-purchase-model-is-typically-built)
+    - [Implementation in Our Architecture](#implementation-in-our-architecture)
+  - [Appendix 1. Models for Embedding Contents](#appendix-1-models-for-embedding-contents)
+    - [Clarifying the Training Goal](#clarifying-the-training-goal)
+    - [How are these Models Trained? (The Core Idea: Contrastive Learning)](#how-are-these-models-trained-the-core-idea-contrastive-learning)
+    - [The Big Question: Train from Scratch vs. Fine-tune vs. Use Off-the-Shelf](#the-big-question-train-from-scratch-vs-fine-tune-vs-use-off-the-shelf)
+      - [Option 1: Use a Pre-trained, Off-the-Shelf Model (Highly Recommended)](#option-1-use-a-pre-trained-off-the-shelf-model-highly-recommended)
+      - [Option 2: Fine-Tuning a Pre-trained Model (The Advanced Step)](#option-2-fine-tuning-a-pre-trained-model-the-advanced-step)
+      - [Option 3: Training an Embedding Model from Scratch](#option-3-training-an-embedding-model-from-scratch)
+    - [Recommended Strategy](#recommended-strategy)
+  - [Appendix 2. Embedding Structured Contents](#appendix-2-embedding-structured-contents)
+    - [How the Transformation Works](#how-the-transformation-works)
+    - [Why This Works](#why-this-works)
+    - [What about Non-Textual Data?](#what-about-non-textual-data)
+    - [The Overall Flow](#the-overall-flow)
 
-## Book Recommendation System: Requirements
+## Requirements
 
 This document outlines the goals and requirements for a system that provides personalized and non-personalized book recommendations across the bookstore website.
 
-#### **A. Business & User Goals**
+#### 1. Business & User Goals
 
 * **Business Goals:**
     * **Increase Sales:** Drive revenue through effective cross-selling ("Frequently Bought Together") and up-selling.
@@ -20,9 +61,9 @@ This document outlines the goals and requirements for a system that provides per
     * **Reduced Effort:** To receive relevant suggestions that save them time browsing and searching.
     * **Contextual Relevance:** To see recommendations that make sense in the context of what they are currently doing (e.g., viewing a specific book or searching for a topic).
 
-#### **B. Functional Requirements**
+#### 2. Functional Requirements
 
-**1. General System-Wide Requirements**
+**2.1 General System-Wide Requirements**
 
 * **Personalization:** For logged-in users with a history, recommendations should be personalized based on their past purchases, viewed products, ratings, and search queries.
 * **Cold-Start Handling:** The system must provide sensible, non-personalized recommendations for new or anonymous users who have no interaction history.
@@ -30,7 +71,7 @@ This document outlines the goals and requirements for a system that provides per
 * **Diversity and Serendipity:** Recommendations should not be overly narrow. The system should introduce a degree of diversity (e.g., related but distinct genres) and serendipity (unexpected but pleasant discoveries) to avoid creating a "filter bubble".
 * **Transparency:** Where feasible, the system should provide a simple, user-facing explanation for a recommendation (e.g., "Because you liked 'Dune'", "Trending in Science Fiction").
 
-**2. Placement-Specific Requirements**
+**2.2 Placement-Specific Requirements**
 
 The type and logic of recommendations will differ depending on where they are displayed on the site.
 
@@ -60,7 +101,7 @@ The type and logic of recommendations will differ depending on where they are di
     * **Modules Required:**
         * **"Don't Forget These...":** Recommendations based on the specific combination of items currently in the user's cart (e.g., "Customers who bought 'Dune' and 'Hyperion' also bought 'Foundation'").
 
-#### **C. Non-Functional Requirements**
+#### 3. Non-Functional Requirements
 
 * **Performance (Latency):** Recommendations must be generated and displayed quickly to not slow down page load times. The target latency for retrieving recommendations should be **under 200ms**.
 * **Scalability:** The recommendation system must scale to handle a large and growing catalog of books, millions of users, and billions of interaction events.
@@ -240,7 +281,7 @@ This model takes a very different approach from Collaborative Filtering. Instead
 
 ---
 
-## **Deep Dive: Content-Based Filtering**
+## Deep Dive: Content-Based Filtering
 
 ### 1. The Core Idea: "If You Liked That, You'll Like This"
 
@@ -275,7 +316,7 @@ This is where our existing **Semantic Search** design gives us a massive advanta
 
 ----
 
-### How Book Profile is Processed
+### 4. How Book Profile is Processed
 
 The answer depends on the method being used. In the **traditional method**, the structure of a book profile is largely flattened into a "bag of keywords with weights." However, in the **modern embeddings approach** that we've designed, the structure is handled in a much more sophisticated way.
 

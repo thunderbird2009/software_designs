@@ -1,5 +1,28 @@
 # Payment with a 3P Service like Stripe
 
+- [Payment with a 3P Service like Stripe](#payment-with-a-3p-service-like-stripe)
+  - [Requirements and User Experience Context](#requirements-and-user-experience-context)
+  - [One-time Payment Method](#one-time-payment-method)
+    - [The Problem: Handling Raw Credit Card Data is Difficult and Risky](#the-problem-handling-raw-credit-card-data-is-difficult-and-risky)
+    - [How the Payment Token Flow Works](#how-the-payment-token-flow-works)
+  - [Use Stored Payment Methods](#use-stored-payment-methods)
+    - [The Concept: `Customer` and `PaymentMethod` Objects](#the-concept-customer-and-paymentmethod-objects)
+    - [Workflow for a First-Time Buyer Saving a Card](#workflow-for-a-first-time-buyer-saving-a-card)
+    - [Workflow for a Returning Customer](#workflow-for-a-returning-customer)
+
+## Requirements and User Experience Context
+
+This document details the technical design for the payment processing stage of the bookstore's checkout flow. The complete end-to-end user experience for checkout is defined in [`bookstore_analytics.md`](./bookstore_analytics.md). This design specifically covers the implementation of **Step 3: Payment Information** from that user flow.
+
+The key user experience requirements that this design addresses are:
+* Allowing a user to pay by entering new credit card information into a secure, embedded form.
+* Allowing a returning customer to select a previously saved payment method for a faster checkout.
+* Providing an option for the user to save their new card details for future purchases.
+
+The following sections explain the tokenization strategy and data models used to meet these requirements while ensuring maximum security and minimizing PCI DSS compliance scope.
+
+---
+
 ## One-time Payment Method
 
 A **payment token** is a secure, single-use, non-sensitive string of characters that represents a customer's raw credit card information. It acts as a substitute or a stand-in for the actual card details (the 16-digit number, CVV, and expiration date).

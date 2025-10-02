@@ -1,6 +1,37 @@
 # Analytics of the Bookstore
 Moving on to analytics is the critical next step that justifies and informs all the complex systems we've designed. An analytics framework allows us to measure the impact of our work and make data-driven decisions.
 
+- [Analytics of the Bookstore](#analytics-of-the-bookstore)
+  - [Analytics Requirements for the Bookstore](#analytics-requirements-for-the-bookstore)
+    - [Part 1: Dashboard Reporting (Ongoing KPI Monitoring)](#part-1-dashboard-reporting-ongoing-kpi-monitoring)
+      - [**A. Overall Business Health KPIs**](#a-overall-business-health-kpis)
+      - [**B. Customer Acquisition \& Behavior Funnel**](#b-customer-acquisition--behavior-funnel)
+      - [**C. Product (Book) Performance**](#c-product-book-performance)
+      - [**D. Site Feature Engagement \& Effectiveness**](#d-site-feature-engagement--effectiveness)
+    - [Part 2: Ad-Hoc Analytics (Deep-Dive Questions)](#part-2-ad-hoc-analytics-deep-dive-questions)
+      - [**A. Customer Segmentation \& Behavior Analysis**](#a-customer-segmentation--behavior-analysis)
+      - [**B. Pathing and Funnel Analysis**](#b-pathing-and-funnel-analysis)
+      - [**C. Product Affinity \& Cross-Sell Analysis (Analyzing Books)**](#c-product-affinity--cross-sell-analysis-analyzing-books)
+      - [**D. Feature Impact \& Causal Analysis**](#d-feature-impact--causal-analysis)
+  - [High-Level Analytics Architecture](#high-level-analytics-architecture)
+    - [Component Breakdown](#component-breakdown)
+      - [1. Data Collection Layer](#1-data-collection-layer)
+      - [2. Data Storage Layer (The Lakehouse)](#2-data-storage-layer-the-lakehouse)
+      - [3. Data Transformation Layer](#3-data-transformation-layer)
+      - [4. Data Serving \& Visualization Layer](#4-data-serving--visualization-layer)
+  - [Use Case Example: Metrics of Hourly Gross Merchandise Value (GMV)](#use-case-example-metrics-of-hourly-gross-merchandise-value-gmv)
+    - [The Data Source: The `OrderPlaced` Event](#the-data-source-the-orderplaced-event)
+    - [Path 1: The Streaming Flow (For the "Live" Metric)](#path-1-the-streaming-flow-for-the-live-metric)
+    - [Path 2: The Batch Flow (For the "Source of Truth")](#path-2-the-batch-flow-for-the-source-of-truth)
+    - [Putting It All Together: The BI Tool (Looker/Tableau)](#putting-it-all-together-the-bi-tool-lookertableau)
+  - [Lambda vs. Kappa Architecture](#lambda-vs-kappa-architecture)
+    - [The Implications of a Dual-Codebase Architecture](#the-implications-of-a-dual-codebase-architecture)
+    - [The Remediation: The Kappa Architecture (Unified Logic)](#the-remediation-the-kappa-architecture-unified-logic)
+  - [Fit ML Workloads into the Architecture](#fit-ml-workloads-into-the-architecture)
+    - [**Phase 1: Offline Model Training**](#phase-1-offline-model-training)
+    - [**Phase 2: Online Model Serving**](#phase-2-online-model-serving)
+    - [Updated Architecture Diagram with ML Workloads](#updated-architecture-diagram-with-ml-workloads)
+
 ---
 
 ## Analytics Requirements for the Bookstore
