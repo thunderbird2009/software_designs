@@ -1,4 +1,4 @@
-# Optimizing Hiring Workflows with Machine Learning
+# Optimizing Hiring Workflows with Reinforcement Learning
 
 **Disclaimer:**
 
@@ -344,3 +344,4 @@ The system operates in a continuous loop for each active workflow. Here's how a 
 7.  **Advance Workflow:** The Orchestrator consults the DAG to determine the next step, and the process repeats.
 
 This architecture creates a robust feedback loop where the system is constantly making decisions online while its intelligence is continuously being upgraded offline.
+
