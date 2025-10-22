@@ -44,9 +44,9 @@ This document provides a detailed look into the architecture, components, and lo
       - [10.1.1. Database Sharding](#1011-database-sharding)
       - [10.1.2. Archival of Old Data](#1012-archival-of-old-data)
     - [**10.2. Handling Hotspot Jobs**](#102-handling-hotspot-jobs)
-    - [**10.3. Concurrency**](#103-concurrency)
-    - [**10.4. Asynchronous Processing**](#104-asynchronous-processing)
-  - [**11. Failure Recovery**](#11-failure-recovery)
+    - [**10.3. Scaling Reads: Read Replicas**](#103-scaling-reads-read-replicas)
+    - [**10.4. Scaling Writes: Asynchronous Processing**](#104-scaling-writes-asynchronous-processing)
+  - [**11. Handling Failures of Services in a Distributed System**](#11-handling-failures-of-services-in-a-distributed-system)
     - [**11.1. Foundational Resilience and Graceful Degradation**](#111-foundational-resilience-and-graceful-degradation)
     - [**11.2. Ensuring Atomicity of Database Writes and Event Publishing**](#112-ensuring-atomicity-of-database-writes-and-event-publishing)
       - [11.2.1. Solution 1: Transactional Outbox Pattern (Recommended)](#1121-solution-1-transactional-outbox-pattern-recommended)
@@ -623,6 +623,8 @@ sequenceDiagram
 
 ## **10. Scalability and Performance Considerations**
 
+Most application services within this subsystem are designed to be stateless, allowing them to be scaled horizontally with ease. The true scalability and performance challenges, therefore, lie in managing the underlying stateful data layer and ensuring the system remains responsive under heavy write loads. This section outlines the key strategies for achieving this, from handling high data volumes and mitigating write contention, to scaling read performance and using asynchronous processing to maintain a fast, resilient, and responsive user experience.
+
 ### **10.1. Scaling for Data Volume**
 
 As the platform grows, the sheer volume of data, particularly in the `Judgments` and `Units` tables, will become the primary bottleneck. A single database instance will eventually fail to handle the write throughput and storage requirements. To address this, a horizontal sharding strategy is essential. The core principle is to co-locate all data related to a single task to ensure that our high-frequency transactions remain on a single shard, avoiding the complexity and performance penalty of distributed transactions.
@@ -767,10 +769,42 @@ This is the ultimate safety net to protect the stability of the entire platform.
 *   **Behavior:** When the rate of assignment requests exceeds a safe threshold, the service starts returning a `429 Too Many Requests` status code or a user-friendly message like "This task is currently experiencing very high demand. Please try again in a few moments."
 *   **Benefit:** This prevents the database shard from being completely overwhelmed. It's a crucial trade-off, sacrificing the availability of a single hot job to preserve the stability and performance of the entire platform.
 
-### **10.3. Concurrency**
-How to handle race conditions, such as multiple judgments for the same unit arriving simultaneously, using techniques like optimistic locking or transactional updates.
+### **10.3. Scaling Reads: Read Replicas**
 
-### **10.4. Asynchronous Processing**
+Many read queries in the system do not need to be executed against the absolute latest, up-to-the-millisecond version of the data. These queries are excellent candidates to be offloaded from the primary write database to one or more **read replicas**. A read replica is a continuously updated copy of the primary database that can serve read-only traffic.
+
+**Candidate Queries for Read Replicas:**
+
+*   **Dashboards and Analytics:** Queries that power internal dashboards for monitoring job progress, contributor performance, or overall system health. A few seconds or even a minute of data lag is perfectly acceptable for these use cases.
+*   **Reporting:** Generating reports on historical data.
+*   **Data Export:** Large data export tasks that read a significant volume of historical `Units` and `Judgments`.
+*   **Non-critical UI Elements:** Parts of the user interface that display secondary information, such as historical activity feeds or summary statistics.
+
+**Queries That MUST Use the Primary Database:**
+
+Any read that is part of a read-write transaction or requires the absolute latest state of the data must go to the primary database. This includes:
+*   The `SELECT ... FOR UPDATE` query used in the unit assignment process.
+*   Checks that happen within a transaction, such as the `Aggregation Service` checking the current `judgment_count` before deciding to finalize a unit.
+
+**Implementation:**
+
+The application will be configured with two separate database connection pools:
+1.  **Primary Connection Pool:** Used for all write operations and any read operations that require strict consistency.
+2.  **Replica Connection Pool:** Used for all read-only queries that can tolerate minor data staleness.
+
+The application's data access layer will be responsible for routing queries to the appropriate connection pool based on the nature of the operation.
+
+**Benefits:**
+
+*   **Reduced Load on Primary:** Offloading read traffic significantly reduces the CPU, memory, and I/O load on the primary database, freeing up its resources to handle the critical write workload (e.g., `INSERT`ing judgments). This improves the performance and stability of the entire system.
+*   **Read Scalability:** You can scale read capacity horizontally by simply adding more read replicas as read traffic grows, without impacting the write performance of the primary.
+
+**Trade-offs:**
+
+*   **Replication Lag:** The primary trade-off is **replication lag**. There will always be a small delay (from milliseconds to seconds) between when data is written to the primary and when it becomes visible on the replica. The application must be designed to tolerate this staleness for the queries it sends to the replicas.
+*   **Increased Infrastructure Cost:** Maintaining one or more replica servers adds to the operational and hosting costs.
+
+### **10.4. Scaling Writes: Asynchronous Processing**
 
 To ensure the platform remains responsive and scalable, particularly under heavy write loads, it is critical to distinguish between operations that must be handled immediately (synchronously) and those that can be processed in the background (asynchronously). The `POST /judgments` endpoint is the highest-volume write operation in the system, and its performance directly impacts the user experience. A slow response from this endpoint can lead to timeouts and a frustrating experience for contributors.
 
@@ -815,9 +849,9 @@ Once the `JudgmentReceived` event is published, several independent background s
 
 ---
 
-## **11. Failure Recovery**
+## **11. Handling Failures of Services in a Distributed System**
 
-This chapter outlines the strategies and patterns used within the Task & Execution Subsystem to handle failures, ensuring data integrity, high availability, and operational continuity.
+This chapter outlines the strategies and patterns for building resilient services within the Task & Execution Subsystem. It focuses on handling the types of failures inherent in a distributed architecture to ensure data integrity, high availability, and operational continuity.
 
 ### **11.1. Foundational Resilience and Graceful Degradation**
 
