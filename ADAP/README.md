@@ -1,6 +1,6 @@
 # ADAP: A Data Annotation Platform - Design Documents
 
-This repository contains the product and architectural design documents for the Appen Data Annotation Platform (ADAP). ADAP is an end-to-end SaaS platform designed for the creation, management, and annotation of high-quality data required for artificial intelligence (AI) and machine learning (ML) models.
+This repository contains the product and architectural design documents for the Appen Data Annotation Platform (ADAP). ADAP is an end-to-end SaaS platform designed for the creation, management, and annotation of high-quality data required for training and evaluating artificial intelligence (AI) and machine learning (ML) models.
 
 These documents provide a comprehensive overview of the platform, from the high-level product vision to the detailed, low-level design of its core components.
 
@@ -38,4 +38,5 @@ For a complete understanding of the platform, it is recommended to read the docu
 - **Detailed Component Design:** Provides an in-depth look at the internal services, owned data models, and key APIs.
 - **Scalability & Performance:** Addresses critical engineering challenges, including database sharding, handling "hotspot" jobs, scaling reads with replicas, and using asynchronous processing to maintain responsiveness.
 - **Distributed System Resilience:** Details patterns for handling failures, such as the Transactional Outbox and Inbox patterns to ensure data integrity and exactly-once processing in an event-driven architecture.
+
 
