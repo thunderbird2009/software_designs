@@ -2,7 +2,7 @@
 
 Data clean rooms, offered by technology providers like Habu, Snowflake, and AWS, are rapidly becoming the cornerstone of responsible data collaboration in a privacy-first world. They function as a secure, neutral environment where multiple organizations can analyze their combined datasets without ever exposing or moving their raw, sensitive customer information. This allows for powerful insights into areas like advertising effectiveness, audience overlap, and customer journey mapping, all while upholding strict data privacy and governance standards.
 
-At its core, a data clean room operates on a simple but powerful premise: **share insights, not raw data.** Let's break down the technology, processes, and analytics involved with a practical, detailed example. And then we will look into the architecture of technology stack of a data cleanroom implementation.
+At its core, a data clean room operates on a simple but powerful premise: **share insights, not raw data.** This document explores the technology, processes, and analytics involved, followed by a look into the architecture of a typical data clean room implementation.
 
 ## The Scenario: A Retailer and a Publisher Collaborate
 
@@ -46,7 +46,7 @@ The hashed data is then uploaded into each company's secure, isolated partition 
 
 ### Step 2: The Secure PII Join
 
-This is the central magic of the clean room. The platform can now perform a "join" on the two datasets using the hashed email as the key, without revealing which specific individuals matched. The matching process happens within a secure compute environment (like a Trusted Execution Environment or using Secure Multi-Party Computation) where the underlying data is inaccessible to any party, including the clean room provider itself.
+This is a central feature of the clean room. The platform can now perform a "join" on the two datasets using the hashed email as the key, without revealing which specific individuals matched. The matching process happens within a secure compute environment (like a Trusted Execution Environment or using Secure Multi-Party Computation) where the underlying data is inaccessible to any party, including the clean room provider itself.
 
 The result is a temporary, joined dataset that exists only for the duration of an approved query. It links ad exposure to purchase behavior for the users who exist in both datasets.
 
