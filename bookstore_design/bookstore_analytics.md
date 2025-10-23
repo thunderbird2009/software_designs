@@ -293,9 +293,9 @@ This hybrid architecture provides the best of both worlds: rock-solid, accurate 
 
 ## Lambda vs. Kappa Architecture
 
-You might have noticed that we have two independent implementations of computing the metrics between streaming and batch. This is a very sharp observation. And this is the single biggest criticism and operational challenge of the classic Lambda Architecture. 
+The two independent implementations for computing metrics in streaming and batch represent the single biggest criticism and operational challenge of the classic Lambda Architecture. 
 
-Let's break down the implications of this dual-codebase problem and then discuss the modern remediation.
+This section breaks down the implications of this dual-codebase problem and then discusses the modern remediation.
 
 ### The Implications of a Dual-Codebase Architecture
 
@@ -369,7 +369,7 @@ This approach completely eliminates the problem of dual codebases and lambda ske
 
 The analytics architecture we've designed is the essential foundation for all machine learning workloads as well. ML models are not separate from this system; they are premier "customers" of the high-quality data it produces.
 
-Let's illustrate how our two main ML workloads—**Learning to Rank (LTR)** for search and the **Recommendation Models**—fit into this architecture. We can think of the ML lifecycle in two distinct phases: **Offline Model Training** and **Online Model Serving**.
+This section illustrates how the two main ML workloads—**Learning to Rank (LTR)** for search and the **Recommendation Models**—fit into this architecture. We can think of the ML lifecycle in two distinct phases: **Offline Model Training** and **Online Model Serving**.
 
 ### **Phase 1: Offline Model Training**
 

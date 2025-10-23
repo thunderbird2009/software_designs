@@ -209,7 +209,7 @@ This architecture provides a scalable and performant foundation for a rich and e
 
 ## Deep Dive: Collaborative Filtering (CF)
 
-Let's zoom into the first and most foundational type of recommendation model we mentioned: **Collaborative Filtering**. This will cover the core concept, the different approaches, and how we would implement the modern, scalable version within our bookstore's architecture.
+This section covers the core concept of Collaborative Filtering, the different approaches, and how the modern, scalable version would be implemented within the bookstore's architecture.
 
 ---
 
@@ -275,12 +275,6 @@ When the `Recommendation Service` needs to show "Recommended for You" to Alice, 
 
 ---
 
-Of course. Let's move on to the second type of model in our hybrid system: **Content-Based Filtering**.
-
-This model takes a very different approach from Collaborative Filtering. Instead of using the "wisdom of the crowd," it focuses on the intrinsic properties of the items themselves.
-
----
-
 ## Deep Dive: Content-Based Filtering
 
 ### 1. The Core Idea: "If You Liked That, You'll Like This"
@@ -318,9 +312,9 @@ This is where our existing **Semantic Search** design gives us a massive advanta
 
 ### 4. How Book Profile is Processed
 
-The answer depends on the method being used. In the **traditional method**, the structure of a book profile is largely flattened into a "bag of keywords with weights." However, in the **modern embeddings approach** that we've designed, the structure is handled in a much more sophisticated way.
+The method used determines how a book's profile is processed. In the **traditional method**, the structure of a book profile is largely flattened into a "bag of keywords with weights." However, in the **modern embeddings approach** that we've designed, the structure is handled in a much more sophisticated way.
 
-Let's break down the two approaches.
+The two approaches are broken down below.
 
 ---
 
@@ -400,7 +394,7 @@ Let's break down the distinctions.
   * **Collaborative Filtering (CF)** is the **general category**. As we discussed, it uses a broad range of user interactions (purchases, clicks, views, 1-5 star ratings) to predict a user's *affinity* or *preference* for an item. The core question it answers is, "How much would this user *like* this item?"
   * A **Co-purchase Model** is a **specific type** of model. It focuses exclusively on one type of interaction: items that are purchased together in the same transaction. The core question it answers is, "Given that a user is buying Book A, what is the probability they will *also buy* Book B in the same transaction?"
 
-Here’s a table to highlight the key differences in how they are typically implemented:
+The key differences in how they are typically implemented are highlighted in the table below:
 
 | Aspect | **General Collaborative Filtering (e.g., Matrix Factorization)** | **Specific Co-purchase Model (e.g., Co-occurrence)** |
 | :--- | :--- | :--- |

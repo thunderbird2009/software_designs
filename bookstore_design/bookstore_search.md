@@ -185,7 +185,7 @@ The "mapping" is the schema for our search index. We will create an index named 
   * **`publication_year` / `average_rating` / `price`**: Numeric types allow for efficient range filtering and sorting.
 
 ### C. Indexed Documents
-Certainly. Here is a complete example of the API request that the **Indexing Service** would send to Elasticsearch.
+Here is a complete example of the API request that the **Indexing Service** would send to Elasticsearch.
 
 This happens after the service has consumed an event (e.g., `BookUpdated`) and aggregated all the necessary data from the `Product Catalog Service`'s database (joining data from the `Books`, `Authors`, and `Reviews` tables) into a single, denormalized JSON document that is optimized for search.
 

@@ -206,7 +206,8 @@ This final stage makes the entire process a continuously improving cycle.
 ----
 
 ## LTR Models
-Let's drill into the core machine learning components of Stage 3. This stage is where we transition from data engineering to data science, building the model that will power our new ranking logic.
+
+This section details the core machine learning components of Stage 3, where the project transitions from data engineering to data science to build the model that will power the new ranking logic.
 
 ---
 
@@ -273,7 +274,7 @@ MAP is another popular ranking metric, but it's designed for **binary relevance*
 
 ### **4. Pointwise vs. Pairwise vs. Listwise Approaches**
 
-You are correct that our approach of assigning a score (0, 1, 2, 3) to each document looks like a regression or classification problem. This is known as a **Pointwise** approach. Let's compare it.
+The approach of assigning a score (0, 1, 2, 3) to each document looks like a regression or classification problem. This is known as a **Pointwise** approach. Let's compare it.
 
 * **Pointwise Approach:**
     * **How it Works:** The model looks at a single `(query, document)` pair and predicts its absolute relevance score (e.g., "this document scores a 2.8"). The final ranking is created by sorting these independent scores.
@@ -477,10 +478,11 @@ We continue this process for hundreds or thousands of trees. Each new tree focus
 While using "residuals" is the perfect way to understand gradient boosting for regression, the technique is far more general. For other tasks like classification or the **LambdaMART ranking** we discussed, the loss function is different, and the calculated gradient is a more complex value. However, the principle remains exactly the same: **each new tree is trained to predict the negative gradient of the loss function from the current ensemble.**
 
 ### Listwise Ranking and LambdaMART
-First let us reconcile on the earlier statements.
 
-* **Statement A:** "The goal of the LTR model is to learn a function that takes all the feature columns as input and predicts the `relevance_label`." (This sounds like a **pointwise** regression or classification task).
-* **Statement B:** "...the goal is to optimize nDCG for a group of documents ranked for a single query." (This sounds like a **listwise** ranking task).
+The model's output and its training objective function resolve the apparent contradiction between a pointwise-style output and a listwise training goal.
+
+*   **Statement A:** "The goal of the LTR model is to learn a function that takes all the feature columns as input and predicts the `relevance_label`." (This sounds like a **pointwise** regression or classification task).
+*   **Statement B:** "...the goal is to optimize nDCG for a group of documents ranked for a single query." (This sounds like a **listwise** ranking task).
 
 The contradiction is resolved by understanding the difference between the **model's output** and the **model's training objective function**.
 

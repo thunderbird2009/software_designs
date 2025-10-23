@@ -101,7 +101,7 @@ Here are the primary user stories and workflows the system must support.
 
 ---
 
-Of course. Here is the complete high-level architecture design for the "Bibliotheca" bookstore, updated to reflect a modern, microservices-based, and event-driven approach with a client-side rendered frontend.
+Here is the complete high-level architecture design for the "Bibliotheca" bookstore, updated to reflect a modern, microservices-based, and event-driven approach with a client-side rendered frontend.
 
 -----
 

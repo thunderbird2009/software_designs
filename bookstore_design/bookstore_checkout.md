@@ -47,9 +47,7 @@ From the user's perspective, the flow consists of the following steps:
 ---
 The following technical design focuses specifically on the backend processes that are triggered after the user clicks the final "Place Your Order" button (Step 4 in the user flow above). This is the most critical and complex part of the transaction, requiring coordination across multiple services.
 
-Of course. To better motivate the choice of the Saga pattern, it's an excellent idea to first describe the seemingly simpler alternative of using distributed transactions and explain its significant drawbacks. This provides strong justification for the subsequent, more resilient design.
-
-Here is a new section you can insert into the `bookstore_checkout.md` file, right between the "1. Checkout Requirements and User Flow" section and the "2. Technical Architecture and Design" section.
+To better motivate the choice of the Saga pattern, it's an excellent idea to first describe the seemingly simpler alternative of using distributed transactions and explain its significant drawbacks. This provides strong justification for the subsequent, more resilient design.
 
 -----
 
@@ -327,7 +325,7 @@ For this recovery to work safely, all service calls that change state must be **
 
   * **Example:** The `reserve` call to the `Inventory Service` should accept a unique transaction or order ID. The first time it's called, it reserves the stock. If the recovering `Order Service` calls it again for the same ID, the `Inventory Service` should simply return the original success response without reserving the stock a second time.
 
-That is an excellent and critical point. You are right to be concerned. Executing the entire multi-step saga synchronously while the user waits is a significant performance anti-pattern. It would absolutely result in long, unpredictable wait times and a poor user experience, especially if any of the downstream services (Inventory, Payment) are slow to respond.
+Executing the entire multi-step saga synchronously while the user waits is a significant performance anti-pattern. It would result in long, unpredictable wait times and a poor user experience, especially if any of the downstream services (Inventory, Payment) are slow to respond.
 
 To solve this, we will refine the flow to be almost entirely **asynchronous from the user's perspective**. The goal is to give the user an immediate response and handle the complex, long-running orchestration in the background.
 
