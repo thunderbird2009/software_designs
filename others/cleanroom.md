@@ -4,6 +4,31 @@ Data clean rooms, offered by technology providers like Habu, Snowflake, and AWS,
 
 At its core, a data clean room operates on a simple but powerful premise: **share insights, not raw data.** This document explores the technology, processes, and analytics involved, followed by a look into the architecture of a typical data clean room implementation.
 
+- [The Anatomy of a Data Clean Room: A Deep Dive into Privacy-Preserving Collaboration](#the-anatomy-of-a-data-clean-room-a-deep-dive-into-privacy-preserving-collaboration)
+    - [A Brief History: Origins in the Ad Tech Industry](#a-brief-history-origins-in-the-ad-tech-industry)
+      - [The Era of Third-Party Cookies](#the-era-of-third-party-cookies)
+      - [The Tipping Point: Privacy Regulation and Browser Changes](#the-tipping-point-privacy-regulation-and-browser-changes)
+      - [The Rise of "Walled Gardens" and Early Clean Rooms](#the-rise-of-walled-gardens-and-early-clean-rooms)
+  - [The Scenario: A Retailer and a Publisher Collaborate](#the-scenario-a-retailer-and-a-publisher-collaborate)
+    - [Step 1: Data Preparation and Ingestion](#step-1-data-preparation-and-ingestion)
+    - [Step 2: The Secure PII Join](#step-2-the-secure-pii-join)
+    - [Step 3: Supported Analytics \& Privacy Controls](#step-3-supported-analytics--privacy-controls)
+      - [Example Analysis 1: Campaign Attribution](#example-analysis-1-campaign-attribution)
+      - [Example Analysis 2: Audience Overlap](#example-analysis-2-audience-overlap)
+    - [Step 4: Layered Privacy with K-Anonymity and Differential Privacy](#step-4-layered-privacy-with-k-anonymity-and-differential-privacy)
+      - [Layer 1: K-Anonymity (Aggregation Thresholds)](#layer-1-k-anonymity-aggregation-thresholds)
+      - [Layer 2: Differential Privacy](#layer-2-differential-privacy)
+  - [High Level Architecture and Data Flow](#high-level-architecture-and-data-flow)
+  - [Secure Computation: The Engine of Trust](#secure-computation-the-engine-of-trust)
+    - [The Fundamental Challenge: Data in Use](#the-fundamental-challenge-data-in-use)
+    - [The Solution: Trusted Execution Environments (TEEs)](#the-solution-trusted-execution-environments-tees)
+    - [The Split Architecture: A Practical Design](#the-split-architecture-a-practical-design)
+    - [Anatomy of a Query: Host vs. Enclave](#anatomy-of-a-query-host-vs-enclave)
+      - [The Untrusted Host's Role (The I/O Proxy)](#the-untrusted-hosts-role-the-io-proxy)
+      - [The Enclave's Role (The Secure Orchestrator)](#the-enclaves-role-the-secure-orchestrator)
+    - [The Complete Chain of Trust: A Step-by-Step Workflow ⛓️](#the-complete-chain-of-trust-a-step-by-step-workflow-️)
+
+
 ### A Brief History: Origins in the Ad Tech Industry
 
 The concept of the data clean room is a direct response to a fundamental shift in the digital advertising ecosystem, driven by the collision of data-driven marketing needs and a global movement towards stricter user privacy.
@@ -239,9 +264,10 @@ Here is a more accurate breakdown of the process shown in the diagram:
 
 7.  **Result Release:** Only if the preliminary result passes the runtime enforcement will the platform release the final, vetted answer to the analyst. Otherwise, it returns `NULL` or an error, ensuring no sensitive information is leaked.
   
-Of course. Here is a chapter on Secure Computation, created by synthesizing all the information we've discussed about TEEs and enclaves.
+---
+Next is an in-depth explanation of secure computation in a clean room architecture.
 
------
+---
 
 ## Secure Computation: The Engine of Trust
 
@@ -307,9 +333,60 @@ The communication between these two parts is strictly controlled by a predefined
 
 -----
 
+### Anatomy of a Query: Host vs. Enclave
+
+Let's revisit the campaign attribution query to see how this more sophisticated design works.
+
+#### The Untrusted Host's Role (The I/O Proxy)
+
+The host application prepares the query and acts as a "butler" for the enclave, performing I/O operations on command without being able to see the data it is handling.
+
+```plaintext
+// Host Application Logic (Pseudo-code)
+
+// 1. Initial Setup
+// The host parses the query, validates permissions, and creates an execution plan.
+EnclaveExecutionPlan plan = createExecutionPlan(sqlQuery);
+// The plan contains METADATA: URIs to the encrypted data blobs, join keys, etc.
+// e.g., plan.dataSources = ["s3://bucket/shopgood.enc", "s3://bucket/newsnow.enc"]
+
+// 2. Start the Enclave
+// The host makes an ECALL to start the query, passing the PLAN, not the data.
+SignedResult signedResult = enclave.beginQueryExecution(plan);
+
+// 3. Act as an I/O Service (Listening for OCALLs)
+// The enclave, now running, needs data. It makes an OCALL back to the host.
+// The host's OCALL handler receives the request.
+function handleDataRequest(source_uri, byte_range):
+    // The host fetches the specific ENCRYPTED chunk from storage (e.g., S3).
+    // It cannot read the data; it just shuttles the bytes.
+    EncryptedChunk chunk = readFromStorage(source_uri, byte_range);
+    // The host returns the encrypted chunk back into the enclave.
+    return chunk;
+
+// 4. Forward the Final Result
+// Once the enclave has finished processing, it returns the final signed result.
+// The host forwards this to the client.
+sendToClient(signedResult);
+```
+
+#### The Enclave's Role (The Secure Orchestrator)
+
+In this model, the enclave is the secure orchestrator. It receives the high-level plan from the host and then takes complete control of the execution flow.
+
+When the enclave's logic needs to read data (e.g., to perform the join), it doesn't have the data locally. Instead, it makes a secure **OCALL** (an "out-call") to the host. This call is a highly specific request, such as: *"Fetch me bytes 1,000,000 to 2,000,000 from the encrypted file at `s3://bucket/shopgood.enc`."*
+
+The host honors this request, fetching the encrypted chunk and returning it to the enclave. The enclave then decrypts this small chunk *inside its protected memory*, uses it for the computation, and then discards it, requesting the next chunk as needed.
+
+This streaming approach is far more scalable and memory-efficient. It ensures the enclave only holds the tiny fraction of data it is actively working on at any given moment, while the untrusted host handles the mechanics of I/O with cloud storage.
+
+This leads to a crucial design principle: the **untrusted host** contains the *query planner*, which can parse SQL and create an optimized execution plan. However, the **trusted enclave** must contain the entire *query executor*—all the code that actually touches decrypted data. This includes the data parsers, the logic for `JOIN`, `FILTER`, and `GROUP BY`, and the final privacy-enhancing functions. By attesting to the enclave's code, the client is verifying the integrity of the entire execution engine, which remains the sole holder of the decryption keys and the only component that ever sees the plaintext data.
+
+-----
+
 ### The Complete Chain of Trust: A Step-by-Step Workflow ⛓️
 
-By combining these concepts, we can create a complete, end-to-end trusted workflow that prevents any party—including the host application—from cheating.
+By combining these concepts, a complete, end-to-end trusted workflow can be created that prevents any party—including the host application—from cheating.
 
 ```mermaid
 sequenceDiagram
@@ -322,25 +399,37 @@ sequenceDiagram
     Note over Client, Host: "Phase 1: Policy Agreement"
     Client->>Client: 1. Parties agree on & sign a "Policy Packet"
 
-    Note over Client, Enclave: "Phase 2: Enclave Verification"
+    Note over Client, Enclave: "Phase 2: Enclave Verification & Policy Binding"
     Client->>Host: 2. Initiate session with signed policy
-    Host->>Enclave: 3. Load enclave & policy
-    Enclave-->>Host: 4. Generate Attestation Report
-    Host-->>Client: 5. Forward Report
-    Client->>Client: 6. ✅ Verify Enclave's code hash & identity
+    Host->>Enclave: 3. Load enclave & pass policy into it
+    Enclave->>Enclave: 4. Generate Attestation Report (containing hash of policy)
+    Enclave-->>Host: 5. Return Attestation Report
+    Host-->>Client: 6. Forward Report
+    Client->>Client: 7. ✅ Verify Enclave's code & policy hash
 
-    Note over Client, Enclave: "Phase 3: Secure Execution & Signing"
-    Host->>Enclave: 7. ECALL: Execute Query
-    Enclave->>Enclave: 8. Verify signatures on the policy packet
-    Enclave->>Enclave: 9. Perform secure join, aggregation, & privacy checks
-    Enclave->>Enclave: 10. Sign the final, vetted result
-    Enclave-->>Host: 11. Return signed result
-    Host-->>Client: 12. Forward signed result
-    Client->>Client: 13. ✅ Verify signature on the result
+    Note over Client, Enclave: "Phase 3: Secure Execution, Signing & Verification"
+    Client->>Host: 8. Send SQL Query
+    Host->>Host: 9. Parse SQL & Generate Query Plan
+    Host->>Enclave: 10. ECALL: Execute Query Plan
+    Enclave->>Enclave: 11. Perform secure join, aggregation, & privacy checks (via OCALLs)
+    Enclave->>Enclave: 12. Sign the final, vetted result
+    Enclave-->>Host: 13. Return signed result
+    Host-->>Client: 14. Forward signed result for verification
+    Client->>Client: 15. ✅ Verify signature on the result
 ```
 
 1.  **Policy Agreement:** The collaborating parties first agree on the rules for a query (schema, join keys, privacy thresholds) and create a **policy packet**, which they all digitally sign.
 
-2.  **Attestation:** The client initiates a session. The enclave is loaded, and it provides an attestation report to the client. The client verifies the enclave is the correct, untampered version before proceeding.
+2.  **Attestation and Policy Binding:** The client initiates a session by sending the signed policy to the host. The host loads the enclave and passes the policy into it. The enclave then instructs the CPU to generate an **attestation report**. This signed report contains two critical pieces of information:
+    *   **The Enclave's Measurement:** A cryptographic hash of the enclave's code and initial state, proving it is the exact, expected software.
+    *   **Report Data:** A field where the enclave's code has placed a hash of the policy packet it just received.
 
-3.  **Secure Execution:** The untrusted host passes the signed
+    The client receives this report and performs two checks: 1) It verifies that the enclave's measurement hash matches the known, trusted value. 2) It verifies that the policy hash in the report data matches the hash of the policy it originally sent. If both pass, the client has cryptographic proof that the correct code is running on genuine hardware and has been initialized with the correct, untampered policy. This creates a secure binding between the enclave session and the agreed-upon rules.
+
+3.  **Query Submission and Planning:** After attestation, the client sends a standard SQL query to the host. The host's untrusted *query planner* parses the SQL, validates it, and creates a secure execution plan. This plan is a set of instructions for the enclave but does not contain the sensitive data itself.
+
+4.  **Secure Execution:** The host initiates the query by making an ECALL to the enclave, passing the execution plan. The enclave's trusted *query executor* takes over, using OCALLs to request encrypted data chunks from the host as needed. It performs the join, aggregation, and privacy enforcement according to the policy it received during attestation.
+
+5.  **Result Signing and Verification:** The enclave acts as a **notary public**. It uses its private key—which is cryptographically tied to the attested enclave session—to sign the final, vetted result. This signature is the client's proof that the result was generated by the exact, untampered code it verified during attestation. The client receives this signed result and verifies the signature. Since the client trusts the enclave's code to correctly execute the entire privacy-preserving workflow, a valid signature serves as a guarantee that the host properly triggered this logic and that the result is authentic and untampered. Any result without a valid signature is rejected.
+
+This end-to-end process makes the untrusted host a simple courier, unable to influence the rules or forge a result. It moves the clean room's security from a promise to a **verifiable, cryptographic fact**.
